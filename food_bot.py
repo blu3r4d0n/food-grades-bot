@@ -26,7 +26,7 @@ import tweepy
 
 def main():
     #get data from DHEC
-    date=datetime.now(pytz.timezone('America/New_York'))-timedelta(2)
+    date=datetime.now(pytz.timezone('America/New_York'))-timedelta(1)
     datefmt=date.strftime('%m-%d-%y').replace('-','%2F')
     resp=requests.get(f"https://apps.dhec.sc.gov/Environment/FoodGrades/rate.aspx?fn=&pg=&ft=&aa=&ci=&cy=&sd={datefmt}&ed={datefmt}").content
     df=pd.read_html(resp)[0]
