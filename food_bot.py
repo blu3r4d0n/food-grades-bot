@@ -9,6 +9,10 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from sqlalchemy import * 
 from datetime import datetime
+from pdfminer.high_level import extract_text
+import re
+import requests 
+from io import BytesIO
 #logging.basicConfig(filename='log.txt', encoding='utf-8',filemode='a', level=logging.INFO)
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
@@ -31,7 +35,14 @@ def main():
     for i in c_restaurants:
         sleep(1)
         inspection_date=datetime.strptime(i[4],"%Y-%m-%d").strftime('%B %d')
-        client.create_tweet(text=f"On {inspection_date}, {i[0].title()} in {i[2].title()}, recieved a C rating from DHEC in a {i[5].lower()} inspection. Report: {i[6]}")
+        pdf = requests.get(i[6]).content
+        pdf=BytesIO(pdf)
+        txt=extract_text(pdf)
+        pct_loc=re.search('%',txt).span()[0]
+        score = txt[pct_loc-3:pct_loc]
+        score=score[1:]
+        #print(f"On {inspection_date}, {i[0].title()} in {i[2].title()}, recieved a C rating and a score of {score}% from DHEC in a {i[5].lower()} inspection. Report: {i[6]}")
+        client.create_tweet(text=f"On {inspection_date}, {i[0].title()} in {i[2].title()}, recieved a C rating and a score of {score}% from DHEC in a {i[5].lower()} inspection. Report: {i[6]}")
         creds = None
     with engine.connect() as conn:
             conn.execute(text('UPDATE grades set tweeted = 1 where tweeted = 0 AND Grade=\'C\''))
@@ -54,7 +65,8 @@ def main():
 
     try:
         service = build('sheets', 'v4', credentials=creds)
-        spreadsheet_id='1AHwSYntNsAAyPvMM6PYLVvu7_ZKs11iS7Y8o6cyFW5Y'
+        #spreadsheet_id='1AHwSYntNsAAyPvMM6PYLVvu7_ZKs11iS7Y8o6cyFW5Y'
+        spreadsheet_id='1jd9Sig8a6i0TzesN0FAi_KXuffiVTtPqE6f91GtqaO0'
         # Call the Sheets API
         #sheet = service.spreadsheets()
         values = grades
